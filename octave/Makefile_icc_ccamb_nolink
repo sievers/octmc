@@ -1,0 +1,88 @@
+#include Makefile.inc
+
+CPP=mkoctfile -v
+#CC=g++
+
+CC=icc
+FC=ifort
+
+
+MKL=/opt/intel/Compiler/11.0/081/mkl/
+IOMP=/opt/intel/Compiler/11.0/081/lib/intel64/
+
+FFLAGS = -O2  -cpp -openmp   -fPIC 
+
+
+
+CAMB_INC=-I/home/sievers/local/include/  -I${SCINET_GSL_INC}
+
+#CAMB_LIBS= -L${SCINET_GSL_LIB} -lgsl -lgomp -lpthread -lm
+CAMB_LIBS= -L${SCINET_GSL_LIB} -lgsl -liomp5  -lm -lifport -lifcore
+
+#CAMB_LIBS=-L/home/sievers/local/lib/ -lccamb -L${SCINET_GSL_LIB} -lgsl -liomp5 -lm -L/scinet/gpc/intel/Compiler/11.1/072/lib/intel64/ -lifport -lifcore
+
+CFLAGS=${CAMB_INC} 
+
+
+CXXFLAGS=-fopenmp  
+
+CAMB_DIR = Camb_files/
+LIKE_DIR = Other_like/
+MCMC_DIR = Mcmc/
+
+EQUATIONS     = $(CAMB_DIR)equations_cross
+POWERSPECTRUM = $(CAMB_DIR)power_tilt
+NONLINEAR     =$(CAMB_DIR)halofit
+
+
+
+CAMBOBJ       =  $(CAMB_DIR)utils.o $(CAMB_DIR)constants.o $(CAMB_DIR)subroutines.o $(CAMB_DIR)inifile.o $(MCMC_DIR)include.o $(POWERSPECTRUM).o $(CAMB_DIR)recfast.o $(CAMB_DIR)reionization.o $(CAMB_DIR)modules.o $(CAMB_DIR)bessels.o $(EQUATIONS).o $(NONLINEAR).o $(CAMB_DIR)lensing.o  $(CAMB_DIR)cmbmain.o $(CAMB_DIR)camb.o  $(CAMB_DIR)bsplinepk.o $(CAMB_DIR)baofit.o $(LIKE_DIR)MCMC_IO.o $(LIKE_DIR)settings.o $(LIKE_DIR)cmbdata_quad_jo.o $(LIKE_DIR)pk_tools.o   $(LIKE_DIR)secondary.o  $(MCMC_DIR)get_spectra.o
+
+#MCOBJ = $(MCMC_DIR)/get_spectra.o  $(MCMC_DIR)/get_spectra.o $(MCMC_DIR)/include.o
+MCOBJ = $(MCMC_DIR)/camb_driver.o
+
+#CPROGS = double_vec test_ninkasi_lib todfun_c maputils_c omp_median_c read_tod_header_c skymap2ninkasi corrnoise_utils matutils fft_utils noise_fun mpi_init
+
+CPROGS =  octave_ccamb
+
+BINDIR=./
+
+%.o:%.cpp
+	$(CPP) ${CFLAGS} -c $< -o $@
+
+
+all: $(CPROGS)
+
+#octave_ccamb: octave_ccamb.o
+#	$(CPP) $(CFLAGS) octave_ccamb.o -o $(BINDIR)$@.oct  ${CAMB_LIBS}
+
+octave_ccamb: $(CAMBOBJ) $(MCOBJ)  octave_ccamb.o 
+	$(CPP) $(CFLAGS) $(CAMBOBJ) $(MCOBJ) octave_ccamb.o -o $(BINDIR)$@.oct  ${CAMB_LIBS}
+
+
+
+clean:
+	cd $(BINDIR); rm -f $(CPROGS); cd $(SRCDIR); rm -f $(COBJECTS)
+
+oclean:
+	rm -f $(COBJECTS)
+
+
+
+
+
+
+
+
+
+%.o: %.c
+	$(CC) -O2 -fPIC -fopenmp $(CFLAGS) $(INCS) -c -o $@ $<
+
+
+
+%.o: %.f90
+	$(FC) $(FFLAGS) $(WMAP_INCS) -c -o $@ $<
+
+%.o: %.F90
+	$(FC) $(FFLAGS) $(WMAP_INCS) -c -o $@ $<
+

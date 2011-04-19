@@ -1,0 +1,165 @@
+# Makefile --- WMAP Likelihood code...
+# Modified by J. Dunkley to use MCMC
+
+
+#Commands, and compiler/linker configuration.
+#
+DIFF    = diff -w
+RANLIB  = true
+WMAPFLAGS = #-DFASTERTT  #-DOPTIMIZE #-DFS_SPM #-DTIMING
+
+
+#intel ifort
+#F90     = /group/cmb/jdunkley/packages/intel/fc/9.0/bin/ifort
+#FFLAGS = -O2 -Vaxlib -ip -W0 -WB -openmp
+#F77 	= g77
+## SGI IRIX/MIPSpro-- gets the LAPACK functions from the system SCSL library.
+
+#F90    = f90
+#FFLAGS = -O2 -64  $(WMAPFLAGS) -mp 
+#CC 	= cc
+#CFLAGS = -c -64
+#WMAP_INCS   = -I. -I/usr/local/include 
+#LIBS	= -L.  -L/usr/local/lib  -lcfitsio -lm   -lscs_mp  
+
+
+##Altix lcdm JHU
+#CFITSIO = /usr/local
+#F90    = ifort
+#F77     =icc
+#CC      = icc
+#FFLAGS = -O2 -Vaxlib -ip -W0 -WB -openmp $(WMAPFLAGS) -ftz -DOPTIMIZE
+##FFLAGS = -O $(WMAPFLAGS) -mp -DFASTERTT  -DOPTIMIZE  -DFS_SPM
+#CFLAGS = -c
+#INCS   = -I. -I$(CFITSIO)/include -I/home/jdunkley/Package/Gsl/include/
+#LAPACKDIR = -L/usr/site/intel_mkl-10.2.1.017/lib/em64t/ 
+#LAPACKLIB = -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lguide -lpthread
+#LAPACK = $(LAPACKDIR) $(LAPACKLIB)
+#LIBS   = -L. $(LAPACK) -L$(CFITSIO)/lib -lcfitsio -L/home/jdunkley/Package/Gsl/lib/ -lgsl -lgslcblas 
+
+
+###Altix Goddard
+#F90    = ifort
+#F77	=gcc
+#CC 	= cc
+#FFLAGS = -O2 -Vaxlib -cpp -ip -D__ia64__ -W0 -WB -openmp $(WMAPFLAGS) -ftz  -DBYTESWP=1 -D_POSIX_C_SOURCE=1 -D_SGI_REENTRANT_FUNCTIONS=1 -DLNGLNG=long -DOPTIMIZE 
+##FFLAGS = -O $(WMAPFLAGS) -mp -DFASTERTT  -DOPTIMIZE  -DFS_SPM
+#CFLAGS = -c 
+#INCS   = -I. -I$(CFITSIO)/include -I/home/dunkley/Package/Gsl/include/
+#LIBS   = -L. -L$(CFITSIO)/lib -lcfitsio -L/usr/local/lib -llapack -lblas -L/home/dunkley/Package/Gsl/lib/ -lgsl -lgslcblas  -shared-intel -align all    #-lg2c
+
+
+##Scinet gcc
+F90    = gfortran
+F77	=gcc
+CC 	= gcc
+FFLAGS = -O2  -cpp -fopenmp $(WMAPFLAGS) -ffree-line-length-512 -fPIC -frecursive
+#FFLAGS = -O $(WMAPFLAGS) -mp -DFASTERTT  -DOPTIMIZE  -DFS_SPM
+CFLAGS = -c -fPIC -DDO_MAIN -fopenmp
+INCS   = -I. -I/home/sievers/local/src/cfitsio/  -I${SCINET_GSL_INC}
+LIBS   = -L. -L/home/sievers/local/lib -lcfitsio  -llapack -lgoto2 -L${SCINET_GSL_LIB} -lgsl -lgslcblas  -lgomp -lpthread -lm # -shared-intel -align all    #-lg2c
+
+
+###Scinet intel
+#F90    = ifort
+#F77	= ifort
+#CC 	= icc
+#FFLAGS = -O2  -cpp -openmp $(WMAPFLAGS) -fpic
+##FFLAGS = -O $(WMAPFLAGS) -mp -DFASTERTT  -DOPTIMIZE  -DFS_SPM
+#CFLAGS = -c -fpic
+#INCS   = -I. -I/home/sievers/local/src/cfitsio/  -I${SCINET_GSL_INC}
+#LIBS   = -L. -L/home/sievers/local/lib -lcfitsio  -llapack -lgoto2 -L${SCINET_GSL_LIB} -lgsl -lgslcblas -liomp5 -lm # -shared-intel -align all    #-lg2c
+
+
+
+
+#intel ifort
+#F90     = /group/cmb/jdunkley/packages/intel/fc/9.0/bin/ifort
+#F90     =
+#F77	=gcc
+#CC 	= cc
+#CFLAGS = -c 
+#FFLAGS = -O2 -Vaxlib -ip -W0 -WB -openmp #-DFASTERTT -DFS_SPM 
+#INCS   = -I. -I/usr/local/include 
+#LIBS	= -L. -L/usr/lib/gcc/i386-redhat-linux/3.4.3/ -L/usr/lib -lg2c -lm  -llapack  -lcfitsio -L/group/cmb/jdunkley/packages/intel/fc/9.0/lib/
+
+#NAGF95, single processor: works on Feynman
+#F90     = f95
+#FFLAGS = -O3 -kind=byte -colour -thread_safe #-fpp
+
+
+CAMB_DIR = Camb_files/
+WMAP3_DIR = Wmap3/
+WMAP5_DIR = Wmap5/
+WMAP7_DIR = Wmap7/
+LIKE_DIR = Other_like/
+MCMC_DIR = Mcmc/
+ACT_DIR = Act08/
+
+#Files containing evolution equations and initial power spectrum module
+EQUATIONS     = $(CAMB_DIR)equations_cross
+POWERSPECTRUM = $(CAMB_DIR)power_tilt
+
+#Module doing non-linear scaling
+NONLINEAR     =$(CAMB_DIR)halofit
+
+#Rules.
+
+
+CAMBOBJ       =  $(CAMB_DIR)utils.o $(CAMB_DIR)constants.o $(CAMB_DIR)subroutines.o $(CAMB_DIR)inifile.o $(MCMC_DIR)include.o $(POWERSPECTRUM).o $(CAMB_DIR)recfast.o $(CAMB_DIR)reionization.o $(CAMB_DIR)modules.o $(CAMB_DIR)bessels.o $(EQUATIONS).o $(NONLINEAR).o $(CAMB_DIR)lensing.o $(CAMB_DIR)cmbmain.o $(CAMB_DIR)camb.o  $(CAMB_DIR)bsplinepk.o $(CAMB_DIR)baofit.o $(LIKE_DIR)MCMC_IO.o $(LIKE_DIR)settings.o $(LIKE_DIR)cmbdata_quad_jo.o $(LIKE_DIR)pk_tools.o   $(LIKE_DIR)secondary.o  $(MCMC_DIR)get_spectra.o 
+
+
+WMAP5_OBJS =  $(WMAP5_DIR)read_fits.o  $(WMAP5_DIR)read_archive_map.o $(WMAP5_DIR)healpix_types.o $(WMAP5_DIR)br_mod_dist.o $(WMAP5_DIR)wmap_options.o $(WMAP5_DIR)wmap_util.o     $(WMAP5_DIR)WMAP_5yr_tt_pixlike.o $(WMAP5_DIR)WMAP_gibbs.o $(WMAP5_DIR)tt_beam_and_ptsrc_chisq.o $(WMAP5_DIR)WMAP_5yr_teeebb_pixlike.o $(WMAP5_DIR)WMAP_5yr_likelihood.o $(WMAP5_DIR)wmap5_init.o 
+
+WMAP7_OBJS =  $(WMAP7_DIR)read_fits.o  $(WMAP7_DIR)read_archive_map.o $(WMAP7_DIR)healpix_types.o $(WMAP7_DIR)br_mod_dist.o $(WMAP7_DIR)WMAP_7yr_options.o $(WMAP7_DIR)WMAP_7yr_util.o  $(WMAP7_DIR)WMAP_7yr_tt_pixlike.o $(WMAP7_DIR)WMAP_7yr_gibbs.o $(WMAP7_DIR)WMAP_7yr_tt_beam_ptsrc_chisq.o $(WMAP7_DIR)WMAP_7yr_teeebb_pixlike.o $(WMAP7_DIR)WMAP_7yr_likelihood.o $(WMAP7_DIR)wmap7_init.o
+
+ACT_OBJS =  $(ACT_DIR)ACT_2008_options.o $(ACT_DIR)ACT_2008_beam_chisq.o   $(ACT_DIR)ACT_2008_likelihood.o $(ACT_DIR)act08_init.o
+
+
+LIKE_OBJS = $(LIKE_DIR)chi_sn.o  $(LIKE_DIR)utilsforlrglike.o  $(LIKE_DIR)calc_lrgdr7.o $(LIKE_DIR)calc_like07.o $(LIKE_DIR)calc_bao2009.o $(LIKE_DIR)calc_tdel09.o 
+
+
+
+
+all: mc_driver
+	mv mc_driver Bin/.	
+
+#mc_driver :  $(CAMBOBJ) $(WMAP5_OBJS) $(LIKE_OBJS) mc_driver.o 
+#	$(F90) $(FFLAGS) -o $@   mc_driver.o $(CAMBOBJ) $(WMAP5_OBJS)  $(LIKE_OBJS) $(LIBS) 
+
+libs: $(CAMBOBJ) $(MCMC_DIR)/camb_driver.o
+	gcc -shared -Wl,-soname,libccamb.so.1 -o libccamb.so.1.0.1 $(CAMBOBJ) $(MCMC_DIR)/camb_driver.o
+
+libtest: $(CAMBOBJ) $(MCMC_DIR)/camb_driver.o
+	$(F90) $(FFLAGS) -o $@   $(MCMC_DIR)/camb_driver.o $(CAMBOBJ) $(LIBS)	
+
+
+mc_driver :  $(CAMBOBJ) $(WMAP7_OBJS) $(ACT_OBJS) $(LIKE_OBJS) mc_driver.o
+	$(F90) $(FFLAGS) -o $@   mc_driver.o $(CAMBOBJ) $(WMAP7_OBJS)  $(ACT_OBJS) $(LIKE_OBJS) $(LIBS)
+
+
+%.o: %.f90
+	$(F90) $(FFLAGS) $(WMAP_INCS) -c -o $@ $<
+
+%.o: %.F90
+	$(F90) $(FFLAGS) $(WMAP_INCS) -c -o $@ $<
+
+%.o: %.c
+	$(CC) $(CFLAGS) $(INCS) -c -o $@ $<
+
+
+mc_driver.o : $(MCMC_DIR)mc_driver.c $(MCMC_DIR)mc_var.h 
+	$(CC) $(CFLAGS) $(MCMC_DIR)mc_driver.c
+
+
+clean:
+	-rm -f *.o *.mod *.log
+	-rm -f Camb_files/*.o
+	-rm -f Other_like/*.o
+	-rm -f Wmap7/*.o
+	-rm -f Wmap5/*.o
+	-rm -f Mcmc/*.o
+	-rm -f Act08/*.o
+	-rm -r rii_files
+
+#setenv LD_LIBRARY_PATH /home/dunkley/Package/Gsl/lib:$LD_LIBRARY_PATH

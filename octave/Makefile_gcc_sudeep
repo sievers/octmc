@@ -1,0 +1,97 @@
+#include Makefile.inc
+
+CPP=mkoctfile -v
+#CC=g++
+
+MKL=/opt/intel/Compiler/11.0/081/mkl/
+IOMP=/opt/intel/Compiler/11.0/081/lib/intel64/
+
+FFLAGS = -O2  -cpp -fopenmp  -ffree-line-length-512 -fPIC 
+
+
+SUDEEP_DIR=/project/rbond/sievers/modules/mymc/sudeep/CAMBFeb2011/cambInterface
+CAMB_DIR=/project/rbond/sievers/modules/mymc/sudeep/CAMBFeb2011/camb
+
+
+CAMB_INC=-I/home/sievers/local/include/  -I${SCINET_GSL_INC}
+#CAMB_LIBS=-L/home/sievers/local/lib/ -lccamb -L${SCINET_GSL_LIB} -lgsl -lgomp -lpthread -lm
+CAMB_LIBS= -L${CAMB_DIR} -lcamb -L${SUDEEP_DIR} -lcambinterface -L${SCINET_GSL_LIB} -lgsl -lgomp -lpthread -lm
+
+WMAP_LIBS=-L/project/rbond/sievers/modules/likelihood_v4/ -lwmap7  -L/project/rbond/sievers/local_gcc_324/lib -lcfitsio
+#WMAP_LIBS=-L/project/rbond/sievers/modules/likelihood_v4 -lwmap7 
+ACT_LIBS=-L/project/rbond/sievers/modules/v2a1s_likelihood -lactv2a1s
+
+
+
+#CAMB_LIBS=-L/home/sievers/local/lib/ -lccamb -L${SCINET_GSL_LIB} -lgsl -liomp5 -lm -L/scinet/gpc/intel/Compiler/11.1/072/lib/intel64/ -lifport -lifcore
+
+CFLAGS=${CAMB_INC} 
+
+
+CXXFLAGS=-fopenmp  
+
+#CAMB_DIR = Camb_files/
+#LIKE_DIR = Other_like/
+#MCMC_DIR = Mcmc/
+
+#EQUATIONS     = $(CAMB_DIR)equations_cross
+#POWERSPECTRUM = $(CAMB_DIR)power_tilt
+#NONLINEAR     =$(CAMB_DIR)halofit
+
+
+
+
+
+CAMBOBJ=${SUDEEP_DIR}/Enums.o  ${SUDEEP_DIR}/GetSpectra.o ${CAMB_DIR}/SeparableBispectrum.o ${CAMB_DIR}/bessels.o ${CAMB_DIR}/camb.o ${CAMB_DIR}/cmbmain.o ${CAMB_DIR}/constants.o ${CAMB_DIR}/equations.o ${CAMB_DIR}/halofit.o ${CAMB_DIR}/inifile.o ${CAMB_DIR}/lensing.o ${CAMB_DIR}/modules.o ${CAMB_DIR}/power_tilt.o ${CAMB_DIR}/recfast.o ${CAMB_DIR}/reionization.o ${CAMB_DIR}/subroutines.o ${CAMB_DIR}/utils.o
+
+
+#CAMBOBJ       =  $(CAMB_DIR)utils.o $(CAMB_DIR)constants.o $(CAMB_DIR)subroutines.o $(CAMB_DIR)inifile.o $(MCMC_DIR)include.o $(POWERSPECTRUM).o $(CAMB_DIR)recfast.o $(CAMB_DIR)reionization.o $(CAMB_DIR)modules.o $(CAMB_DIR)bessels.o $(EQUATIONS).o $(NONLINEAR).o $(CAMB_DIR)lensing.o  $(CAMB_DIR)cmbmain.o $(CAMB_DIR)camb.o  $(CAMB_DIR)bsplinepk.o $(CAMB_DIR)baofit.o $(LIKE_DIR)MCMC_IO.o $(LIKE_DIR)settings.o $(LIKE_DIR)cmbdata_quad_jo.o $(LIKE_DIR)pk_tools.o   $(LIKE_DIR)secondary.o  $(MCMC_DIR)get_spectra.o
+
+#MCOBJ = $(MCMC_DIR)/get_spectra.o  $(MCMC_DIR)/get_spectra.o $(MCMC_DIR)/include.o
+#MCOBJ = $(MCMC_DIR)/camb_driver.o
+
+#CPROGS = double_vec test_ninkasi_lib todfun_c maputils_c omp_median_c read_tod_header_c skymap2ninkasi corrnoise_utils matutils fft_utils noise_fun mpi_init
+
+CPROGS =  octave_ccamb_sudeep
+
+BINDIR=./
+
+%.o:%.cpp
+	$(CPP) ${CFLAGS} -c $< -o $@
+
+
+all: $(CPROGS)
+
+#octave_ccamb: octave_ccamb.o
+#	$(CPP) $(CFLAGS) octave_ccamb.o -o $(BINDIR)$@.oct  ${CAMB_LIBS}
+
+octave_ccamb_sudeep:  octave_ccamb_sudeep.o 
+	$(CPP) $(CFLAGS) octave_ccamb_sudeep.o  ${CAMBOBJ} -o $(BINDIR)$@.oct   ${ACT_LIBS} ${WMAP_LIBS} 
+
+
+
+clean:
+	cd $(BINDIR); rm -f $(CPROGS); cd $(SRCDIR); rm -f $(COBJECTS)
+
+oclean:
+	rm -f $(COBJECTS)
+
+
+
+
+
+
+
+
+
+%.o: %.c
+	$(CC) -O2 -fPIC -fopenmp $(CFLAGS) $(INCS) -c -o $@ $<
+
+
+
+%.o: %.f90
+	$(FC) $(FFLAGS) $(WMAP_INCS) -c -o $@ $<
+
+%.o: %.F90
+	$(FC) $(FFLAGS) $(WMAP_INCS) -c -o $@ $<
+

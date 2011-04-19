@@ -1,0 +1,51 @@
+#include Makefile.inc
+
+CPP=mkoctfile -v
+CC=g++
+
+MKL=/opt/intel/Compiler/11.0/081/mkl/
+IOMP=/opt/intel/Compiler/11.0/081/lib/intel64/
+
+
+CAMB_INC=-I/home/sievers/local/include/
+CAMB_LIBS=-L/home/sievers/local/lib/ -lccamb -L${SCINET_GSL_LIB} -lgsl -lgomp -lpthread -lm
+#CAMB_LIBS=-L/home/sievers/local/lib/ -lccamb -L${SCINET_GSL_LIB} -lgsl -liomp5 -lm -L/scinet/gpc/intel/Compiler/11.1/072/lib/intel64/ -lifport -lifcore
+
+CFLAGS=${CAMB_INC} 
+
+CXXFLAGS=-fopenmp  
+
+
+#CPROGS = double_vec test_ninkasi_lib todfun_c maputils_c omp_median_c read_tod_header_c skymap2ninkasi corrnoise_utils matutils fft_utils noise_fun mpi_init
+
+CPROGS =  octave_ccamb
+
+BINDIR=./
+
+%.o:%.cpp
+	$(CPP) ${CFLAGS} -c $< -o $@
+
+
+all: $(CPROGS)
+
+octave_ccamb: octave_ccamb.o
+	$(CPP) $(CFLAGS) octave_ccamb.o -o $(BINDIR)$@.oct  ${CAMB_LIBS}
+
+
+
+clean:
+	cd $(BINDIR); rm -f $(CPROGS); cd $(SRCDIR); rm -f $(COBJECTS)
+
+oclean:
+	rm -f $(COBJECTS)
+
+
+
+
+
+
+
+
+
+
+
